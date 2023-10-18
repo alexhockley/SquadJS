@@ -35,6 +35,9 @@ export default class DiscordRoundStartedScoreboard extends DiscordBasePlugin {
     };
   }
 
+  /**
+   * Get the base query to drive the scoreboards. Since SQLLite doesnt support temp tables, CTE is the best we got
+   */
   static get baseQuery(){
     return `WITH sub_kills as (
             SELECT
@@ -157,7 +160,7 @@ export default class DiscordRoundStartedScoreboard extends DiscordBasePlugin {
     await this.sendDiscordMessage({
       embed: {
         title: `TT Scoreboards | ${scoreboardData.match.map} - ${scoreboardData.match.layer}`,
-        description: `${scoreboardData.match.team1} vs ${scoreboardData.match.team2} || ${scoreboardData.match.winnerTeam} won with ${scoreboardData.match.tickets} tickets.`,
+        description: `${scoreboardData.match.team1} (${scoreboardData.team1.kills} kills) vs ${scoreboardData.match.team2} (${scoreboardData.team2.kills} kills)  || ${scoreboardData.match.winnerTeam} won with ${scoreboardData.match.tickets} tickets.`,
         color: this.options.color,
         fields: [
           {
@@ -173,6 +176,7 @@ export default class DiscordRoundStartedScoreboard extends DiscordBasePlugin {
           {
             name: `Combat Medic <:pepeLove:980726517531308032> (Most Revives)`,
             value: this.formatTable(scoreboardData.awards.revives),
+            inline: true,
           },
           {
             name: `Never Give Up <:gigaChad:985711856524066817> (Most Revived)`,
@@ -187,6 +191,7 @@ export default class DiscordRoundStartedScoreboard extends DiscordBasePlugin {
           {
             name: `Unfriendly Fire <:cheemsBonk:980726377496051743> (Most Teamkills)`,
             value: this.formatTable(scoreboardData.awards.teamkills),
+            inline:true,
           }
         ],
         timestamp: info.time.toISOString()
@@ -194,6 +199,9 @@ export default class DiscordRoundStartedScoreboard extends DiscordBasePlugin {
     });
   }
 
+  /**
+   * Format the data in a super simple table
+   */ 
   formatTable(data){
     let str = "";
     data.forEach((element) => {
@@ -213,6 +221,8 @@ export default class DiscordRoundStartedScoreboard extends DiscordBasePlugin {
         "teamkilled":[],
         "teamkills":[]
       },
+      "team1":{},
+      "team2":{},
       "match":{}
     };
       scoreboardData.awards.kills = await this.options.database.query(DiscordRoundStartedScoreboard.baseQuery +"SELECT player, kills FROM t_scoreboards ORDER BY kills DESC LIMIT 3;",{ type: QueryTypes.SELECT });
@@ -221,6 +231,10 @@ export default class DiscordRoundStartedScoreboard extends DiscordBasePlugin {
       scoreboardData.awards.revived = await this.options.database.query(DiscordRoundStartedScoreboard.baseQuery +"SELECT player, revived FROM t_scoreboards ORDER BY revived DESC LIMIT 3;",{ type: QueryTypes.SELECT });
       scoreboardData.awards.teamkilled = await this.options.database.query(DiscordRoundStartedScoreboard.baseQuery +"SELECT player, teamkilled FROM t_scoreboards ORDER BY teamkilled DESC LIMIT 3;",{ type: QueryTypes.SELECT });
       scoreboardData.awards.teamkills = await this.options.database.query(DiscordRoundStartedScoreboard.baseQuery +"SELECT player, teamkills FROM t_scoreboards ORDER BY teamkills DESC LIMIT 3;",{ type: QueryTypes.SELECT });
+      scoreboardData.team1 = await this.options.database.query(DiscordRoundStartedScoreboard.baseQuery +"SELECT sum(kills) as kills FROM t_scoreboards where teamid = 1;",{ type: QueryTypes.SELECT });
+      scoreboardData.team1 = scoreboardData.team1[0];
+      scoreboardData.team2 = await this.options.database.query(DiscordRoundStartedScoreboard.baseQuery +"SELECT sum(kills) as kills FROM t_scoreboards where teamid = 2;",{ type: QueryTypes.SELECT });
+      scoreboardData.team2 = scoreboardData.team2[0];
       scoreboardData.match = await this.options.database.query("SELECT map, layer, tickets, winnerTeam, winnerTeamId, team1, team2 FROM DBLog_Matches where id = (SELECT max(id) FROM DBLog_Matches WHERE endTime IS NOT NULL)",{ type: QueryTypes.SELECT });
       scoreboardData.match = scoreboardData.match[0]
       return scoreboardData;
