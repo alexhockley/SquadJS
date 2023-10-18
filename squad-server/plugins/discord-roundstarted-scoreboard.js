@@ -147,11 +147,11 @@ export default class DiscordRoundStartedScoreboard extends DiscordBasePlugin {
   }
 
   async mount() {
-    this.server.on('ROUND_STARTED', this.onRoundStart);
+    this.server.on('NEW_GAME', this.onRoundStart);
   }
 
   async unmount() {
-    this.server.removeEventListener('ROUND_STARTED', this.onRoundStart);
+    this.server.removeEventListener('NEW_GAME', this.onRoundStart);
   }
 
   async onRoundStart(info) {
